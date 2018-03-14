@@ -1,0 +1,431 @@
+---
+title: "Tutorial on ggplot"
+author: "Nicole Li"
+date: "3/12/2018"
+output: 
+  html_document:
+    fig_height: 6
+    fig_width: 8
+---
+
+# http://tutorials.iq.harvard.edu/R/Rgraphics/Rgraphics.html#exercise_iii
+
+# `ggplot`
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r}
+library(ggplot2)
+housing <- read.csv("./dataSets/landdata-states.csv")
+head(housing, 5)
+```
+<br/>
+
+### `ggplot` VS. Basic Plots
+* is more verbose for simple graphics
+* is less verbose for complex graphics
+* only for data.frame
+* use a different system for adding plot elements
+<br/>
+1. For simple graphic
+```{r}
+# With base graph
+hist(housing$Home.Value)
+```
+
+```{r}
+# With ggplot
+ggplot(housing, aes(x = Home.Value)) +
+  geom_histogram()
+```
+<br/>
+
+2. For complex graphic
+```{r}
+# With base graph
+plot(Home.Value ~ Date, data = subset(housing, State=='MA'))
+points(Home.Value ~ Date, data = subset(housing, State=='TX'), col='red')
+legend(1975, 400000, title = 'State',
+       c('MA','TX'), col=c('black','red'), pch=c(1,1))
+```
+
+```{r}
+# With ggplot
+ggplot(data = subset(housing, State %in% c('MA','TX')),
+       aes(x=Date, y=Home.Value, color=State)) +
+  geom_point()
+```
+
+<br/><br/>
+
+### Aesthetics and Geometric Objects
+*A. Aesthetic Mapping*: 
+In ggplot, the "aesthetic" means "something you can see". For example:
+  + position (e.g. on the x and y axis)
+  + color (outside color)
+  + fill (inside color)
+  + shape
+  + linetype
+  + size
+
+<br/>
+
+*B. Geometric Objects*: 
+These are the actual marks that we put onto a plot. For example:
+  + points
+  + lines
+  + boxplot...
+A plot must have at least one `geom` object, with no upper limit. 
+```{r results='hide'}
+help.search('geom_', package='ggplot2')
+```
+<br/>
+
+1. Scatter/Point Plot
+```{r}
+house2001Q1 <- subset(housing, Date==2001.25)
+ggplot(house2001Q1, aes(x=Land.Value, y=Structure.Cost)) + # mapping for x and y
+  geom_point()
+```
+<br/>
+
+2. Lines (Prediction Lines)
+```{r}
+house2001Q1$pred_sc <- predict(lm(Structure.Cost ~ log(Land.Value), house2001Q1))
+
+ggplot(house2001Q1, aes(x=log(Land.Value), y=Structure.Cost)) +
+  geom_point(aes(color=Home.Value)) +
+  geom_line(aes(y=pred_sc))
+```
+<br/>
+
+3. Smoothers
+```{r}
+ggplot(house2001Q1, aes(x=log(Land.Value), y=Structure.Cost)) +
+  geom_point(aes(color=Home.Value), size=1) +  # !!! size, the fixed aes, is set outside the "aes".
+  geom_line(aes(y=pred_sc)) +
+  geom_smooth()
+```
+<br/>
+
+4. Text (Lable points)
+```{r}
+ggplot(house2001Q1, aes(x=log(Land.Value), y=Structure.Cost)) +
+  geom_point(aes(color=Home.Value, shape=region)) +          # !!! mapping with other fields
+  geom_text(aes(label=State), size=2, hjust=0.5, vjust=-0.9) # !!! size & hjust & vjust, the fixed aes, are set outside the "aes".
+```
+<br/>
+
+### Exercise I
+```{r}
+# Human Development Index (HDI) & Corruption Perception Index (CPI)
+dat <- read.csv("./dataSets/EconomistData.csv")
+head(dat, 3)
+```
+<br/>
+
+* Task 1: Create a scatter plot with CPI on the x axis and HDI on the y axis.
+* Task 2: Color the points blue.
+* Task 3: Map the color of the the points to Region.
+* Task 4: Make the points bigger by setting size to 2
+* Task 5: Map the size of the points to HDI.Rank
+```{r}
+ggplot(dat, aes(x=CPI, y=HDI)) +
+  # geom_point(color='blue') +
+  # geom_point(aes(color=Region), size=2)
+  geom_point(aes(color=Region, size=HDI.Rank))
+```
+<br/><br/>
+
+
+
+
+### Statistical Transformations
+1. Statistical Transformations    
+Some plots, like boxplot and prediction lines, require statistical transformation.
+* for boxplot, the y values must be transformed to median and 1.5.
+* for smoother, the y values must be transformed to the predicted values.
+<br/>
+
+2. Setting Statistical Transformation Arguments   
+Arguments of `stat` functions can be passed through `geom_` functions. But in order to change it, you have to first determine which `stat` the `geom_` uses, then determine the arguments to that `stat`.
+```{r}
+ggplot(housing, aes(Home.Value)) +
+  geom_histogram()
+```
+<br/>
+
+To change the width of each bars in the histogram, we need to state `stat_bin` first...
+```{r}
+ggplot(housing, aes(Home.Value)) +
+  geom_histogram(stat='bin', binwidth=4000)
+```
+<br/>
+
+
+3. Changing The Statistical Transformation  
+
+In `geom_bar`, the `stat` is `count` by default. 
+```{r}
+housing_agg <- aggregate(Home.Value~State + region, data=housing, FUN = mean)
+
+ggplot(housing_agg, aes(x=State, y=Home.Value)) +
+  geom_bar(aes(color=region), stat = 'identity') # specify the 'stat' value
+```
+<br/>
+
+
+### Exercise II
+* Re-create a scatter plot with CPI on the x axis and HDI on the y axis (as you did in the previous exercise).
+* Overlay a smoothing line on top of the scatter plot using geom_smooth.
+* Overlay a smoothing line on top of the scatter plot using geom_smooth, but use a linear model for the predictions. Hint: see ?stat_smooth.
+* Overlay a smoothing line on top of the scatter plot using geom_line. Hint: change the statistical transformation.
+* BONUS: Overlay a smoothing line on top of the scatter plot using the default loess method, but make it less smooth. Hint: see ?loess.
+```{r}
+ggplot(dat, aes(x=CPI, y=HDI)) +
+  geom_point() +
+  geom_smooth(method='loess', span=0.3) #  "lm", "glm", "gam", "loess", "rlm"
+  # geom_line(stat='smooth', method='loess')
+```
+<br/><br/>
+
+
+### Scales
+1. Controlling Aesthetic Mapping
+Aesthetic mapping (i.e., with aes()) only says that a variable should be mapped to an aesthetic. It doesn’t say how that should happen.  
+Describing what colors/shapes/sizes etc. to use is done by modifying the corresponding `scale` (`scale_<aesthetic>_<type>`).   
+The `scale` in ggplot2 includes:  
+* position
+* color and fill
+* size
+* shape
+* line type
+<br/>
+
+2. Common Scale Arguments
+```{r}
+ggplot(housing, aes(x=State, y=Home.Price.Index)) +
+  theme(legend.position = 'top', axis.text = element_text(size=6)) +
+  geom_point(aes(color=Date), 
+             alpha=0.5, 
+             size=1, 
+             position=position_jitter(width=0.15, height=0)) + # adding random noise to a plot to make it easier to read
+  scale_x_discrete('State Abbreviation') +
+  scale_color_continuous(name='Date', 
+                         breaks=c(1976, 1994, 2010), labels=c("'76", "'94", "'10"),
+                         low='blue', high='red') 
+```
+<br/>
+
+
+3. Using different color scales    
+ggplot2 has a wide variety of color scales.    
+This is an example of using `scale_color_gradient2` to interpolate between three different colors.
+```{r}
+ggplot(housing, aes(x=State, y=Home.Price.Index)) +
+  theme(legend.position = 'top', axis.text = element_text(size=5)) +
+  geom_point(aes(color=Date), alpha=0.5, size=1, 
+             position=position_jitter(width = 0.1, height = 0)) +
+  
+  scale_color_gradient2(name="",
+                        breaks=c(1976, 1994, 2013),
+                        labels=c("'76","'94","'13"),
+                        low='blue', high='red', mid='grey60', midpoint = 1994)
+```
+<br/>  
+
+##### Available Scales Categories:
+* `scale_color_`
+* `scale_fill_`
+* `scale_size_`
+* `scale_shape_`
+* `scale_linetype_`
+* `scale_x_`
+* `scale_y_`
+
+<br/><br/> 
+
+### Exercise III   
+* Create a scatter plot with CPI on the x axis and HDI on the y axis. Color the points to indicate region.
+* Modify the x, y, and color scales so that they have more easily-understood names (e.g., spell out “Human development Index” instead of “HDI”).
+* Modify the color scale to use specific values of your choosing. Hint: see ?scale_color_manual.
+```{r}
+ggplot(dat, aes(x=CPI, y=HDI)) +
+  theme(text=element_text(size=9)) +
+  geom_point(aes(color=Region)) +
+  scale_x_continuous(name="Corruption Perception Index") +
+  scale_y_continuous(name="Human Development Index") +
+  scale_color_manual(name="Region of World", 
+                     values=c("#24576D",
+                              "#099DD7",
+                              "#28AADC",
+                              "#248E84",
+                              "#F2583F",
+                              "#96503F"))
+```
+
+
+
+### Facet
+1. Faceting
+```{r}
+# Without faceting, all the lines are crowding together and it's hard to distinguish by state.
+ggplot(housing, aes(x=Date, y=Home.Value)) +
+  theme(text = element_text(size=8)) +
+  geom_line(aes(color=State))
+```
+
+
+```{r}
+# With faceting, all the 
+ggplot(housing, aes(x=Date, y=Home.Value)) +
+  theme(text = element_text(size=8)) +
+  geom_line() +
+  facet_wrap(~State, ncol=10)
+```
+
+
+
+
+### Other Examples
+
+```{r}
+library(tidyr)
+housing.byyear <- aggregate(cbind(Home.Value, Land.Value) ~ Date, data=housing, mean)
+home.land.byyear <- gather(housing.byyear, value = "value", key = "type", Home.Value, Land.Value)
+
+ggplot(home.land.byyear, aes(x=Date, y=value, color=type)) +
+  geom_line()
+
+```
+
+
+##### Graph Simulation
+```{r}
+library(ggthemes)
+library(ggrepel)
+
+dat <- read.csv("./dataSets/EconomistData.csv")
+pointsToLabel <- c("Russia", "Venezuela", "Iraq", "Myanmar", "Sudan",
+                   "Afghanistan", "Congo", "Greece", "Argentina", "Brazil",
+                   "India", "Italy", "China", "South Africa", "Spane",
+                   "Botswana", "Cape Verde", "Bhutan", "Rwanda", "France",
+                   "United States", "Germany", "Britain", "Barbados", "Norway", "Japan",
+                   "New Zealand", "Singapore")
+
+dat$Region <- factor(dat$Region,
+                     levels = c("EU W. Europe",
+                                "Americas",
+                                "Asia Pacific",
+                                "East EU Cemt Asia",
+                                "MENA",
+                                "SSA"),
+                     labels = c("OECD",
+                                "Americas",
+                                "Asia &\nOceania",
+                                "Central &\nEastern Europe",
+                                "Middle East &\nnorth Africa",
+                                "Sub-Saharan\nAfrica"))
+
+ggplot(dat, aes(x=CPI, y=HDI)) +
+  theme(legend.position = "top", text=element_text(size=8)) +
+  geom_smooth(mapping=aes(linetype='R2'),
+              method='lm', formula=y~x+log(x), se=FALSE, 
+              color='#DA3C2A', size=0.7) + 
+  geom_point(aes(color=Region), shape=21, size=2, stroke=1.5) +
+  # labelling points
+  geom_text_repel(aes(label=Country),
+                  color='grey20',
+                  data=subset(dat, Country %in% pointsToLabel),
+                  size=2.5,
+                  force=10) +
+  
+  scale_x_continuous(name="Human Development Index, 2011 (1=best)", limits = c(0.9,10.5), breaks = 1:10) +
+  scale_y_continuous(name="Corruption Perceptions Index, 2011 (10=least corrupt)", limits = c(0.2,1.0), breaks = seq(0.1, 1, by=0.1)) + 
+  scale_color_manual(name="", values = c("#24576D","#099DD7","#28AADC","#248E84","#F2583F","#96503F"), guide=guide_legend(nrow = 1)) +
+  ggtitle("Corruption and Human Development")
+  # + theme_bw()
+```
+
+
+##### Graph Simulation - Solution
+```{r}
+mR2 <- summary(lm(HDI ~ CPI + log(CPI), data = dat))$r.squared
+mR2 <- paste0(format(mR2, digits = 2), "%")
+```
+
+
+```{r}
+library(ggthemes)
+library(ggrepel)
+
+ggplot(dat, aes(x=CPI, y=HDI)) +
+  geom_smooth(mapping=aes(linetype="r2"), method='lm', formula=y~x+log(x), se=FALSE, color='#DA3C2A', size=0.8) +
+  geom_point(aes(color=Region), shape=1, stroke=1.5) +
+  geom_text_repel(mapping=aes(label=Country, alpha=labels),
+                  data=transform(dat, labels=Country %in% c("Russia", "Venezuela", "Iraq", "Myanmar", "Sudan",
+                                                           "Afghanistan", "Congo", "Greece", "Argentina", "Brazil",
+                                                           "India", "Italy", "China", "South Africa", "Spane",
+                                                           "Botswana", "Cape Verde", "Bhutan", "Rwanda", "France",
+                                                           "United States", "Germany", "Britain", "Barbados", "Norway", "Japan",
+                                                           "New Zealand", "Singapore")),
+                  color='gray40',
+                  segment.color='gray80',
+                  size=3) +
+  scale_alpha_discrete(range=c(0,1), guide=FALSE) +
+  scale_x_continuous(name="Corruption Preception Index, 2011 (10=least corrupt)",
+                     limits=c(1.0, 10.0),
+                     breaks=1:10) +
+  scale_y_continuous(name="Human Development Index, 2011 (1=best)",
+                     limits=c(0.2, 1.0),
+                     breaks=seq(0.2,1,by=0.1)) +
+  scale_color_manual(name="",
+                     values=c("#24576D","#099DD7","#28AADC","#248E84","#F2583F","#96503F"),
+                     guide=guide_legend(nrow=1)) + 
+  scale_linetype(name='',
+                 breaks='r2',
+                 labels=list(bquote(R^2==.(mR2))),
+                 guide=guide_legend(override.aes = list(linetype=1, size=2, color="#DA3C2A"))) +
+  ggtitle("Corruption and human development") +
+  
+  theme_bw() +
+  theme(panel.border = element_blank(),
+        panel.grid = element_blank(),
+        panel.grid.major.y = element_line(color='gray'),
+        #panel.grid.major.x = element_line(color='gray'),
+        
+        axis.line.x = element_line(color='gray'),
+        axis.text = element_text(face='italic'),
+        axis.title.x = element_text(face='italic', size=8, color='gray20'),
+        axis.title.y = element_text(face='italic', size=8, color='gray20'),
+        
+        legend.position = 'top',
+        legend.direction = 'horizontal',
+        legend.box= 'horizontal',
+        legend.text = element_text(size=8,color='gray20'),
+        
+        plot.title = element_text(size=13, face = 'bold')
+        )
+  
+```
+
+
+
+http://www.sthda.com/english/wiki/be-awesome-in-ggplot2-a-practical-guide-to-be-highly-effective-r-software-and-data-visualization
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
