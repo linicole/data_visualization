@@ -1,0 +1,110 @@
+---
+title: "Exercise on Diamonds data"
+author: "Nicole Li"
+date: "3/20/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r setting}
+library(ggplot2)
+library(dplyr)
+
+```
+<br/>
+```{r preview data}
+glimpse(diamonds)
+```
+<br/>
+```{r}
+summary(diamonds$carat)
+quantile(diamonds$carat, 0.98)
+```
+<br/><br/>
+
+```{r}
+mydiamonds <- diamonds[which(diamonds$carat<=2.04),]
+```
+<br/><br/>
+
+
+##### Chanllenge 1  
+The diamonds data.frame is included in the ggplot2 package. Study the relationships between carat, price and color. 
+```{r}
+ggplot(mydiamonds, aes(x=carat, y=price, color=color)) +
+  theme(legend.position = 'right') +
+  geom_point(size=0.5) +
+  geom_smooth(method='loess', se=FALSE, fill=NA, size=0.5) +
+  scale_x_continuous(name="Carat", limits=c(0,2.1), breaks=seq(0,2.1,0.3)) +
+  scale_y_continuous(name="Price") +
+  ggtitle("Relationships Between carat, price And color") +
+  theme_bw()
+  
+```
+<br/><br/>
+
+
+##### Chanllenge 2
+
+Dive into the relationship between color and carat.   
+```{r}
+ggplot(diamonds, aes(x=color, y=carat)) +
+  theme(legend.text=element_text(size=3)) +
+  geom_boxplot(aes(fill=color), alpha=0.7, outlier.alpha=0.3) +
+  ggtitle("Relationships Between carat And color") +
+  theme_bw()
+```
+<br/>
+
+```{r, fig.width=10, fig.height=3}
+ggplot(diamonds, aes(x=carat, color=color)) +
+  geom_density() +
+  scale_x_continuous(limits = c(0, 3)) +
+  facet_wrap(~color, ncol=10) +
+  theme_bw()
+
+```
+<br/><br/>
+
+
+
+##### Chanllenge 3   
+Dive into the relationship between color and price.   
+```{r}
+ggplot(diamonds, aes(x=color, y=price)) +
+  geom_boxplot(aes(color=color))
+```
+
+
+Density plots on price by color...
+```{r}
+ggplot(diamonds, aes(x=price)) +
+  geom_density(aes(color=color)) +
+  scale_x_continuous(limits = c(0, quantile(diamonds$price, 0.98))) +
+  facet_wrap(~color, nrow = 2) +
+  theme_bw()
+```
+<br/><br/>
+
+
+##### Chanllenge 4     
+Dive into the relationship between color and (price/carat).   
+```{r}
+ggplot(diamonds, aes(x=color, y=price/carat)) +
+  geom_boxplot(aes(color=color), outlier.alpha = 0.5)
+```
+<br/>
+
+Density plot
+```{r, fig.width=10, fig.height=3}
+ggplot(diamonds, aes(x=price/carat)) +
+  geom_density(aes(color=color)) +
+  scale_x_continuous(limits = c(0,12000)) +
+  facet_wrap(~color, nrow=2)
+```
+
+
+
