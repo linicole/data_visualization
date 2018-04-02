@@ -1,0 +1,69 @@
+---
+title: "Zillow State Time Series"
+author: "Nicole Li"
+date: "3/26/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r setting}
+library(tidyr)
+suppressMessages(library(dplyr))
+library(ggplot2)
+library(ggthemes)
+
+setwd("/Users/lli2/Git/data_visualization/zillow_state_time_series")
+
+state_ts <- read.csv('State_time_series.csv')
+```
+
+#### Some statistics
+```{r}
+table(state_ts$RegionName)
+c(max(as.Date(state_ts$Date)), min(as.Date(state_ts$Date)))
+```
+<br/>
+
+In my interest, California, NewYork, and Virginia will be under examine. Also, create year, month and year_month as categorical variables.
+```{r}
+mydata <- state_ts %>% filter(RegionName %in% c('California','NewYork','Virginia'))
+
+mydata <- mydata %>% 
+  mutate(date_yr = format(as.Date(mydata$Date, format="%Y-%m-%d"), "%Y"),
+         date_mo = format(as.Date(mydata$Date, format="%Y-%m-%d"), "%m"),
+         date_yrmo = format(as.Date(mydata$Date, format="%Y-%m-%d"), "%Y_%m"))
+```
+<br/>
+
+#### Check the missing in the dataset
+```{r preview}
+# glimpse(state_ts)
+valid_columns <- names(mydata)[sapply(mydata, function(x) {sum(is.na(x))/length(x)}) < 0.2]
+head(mydata[,valid_columns], 50)
+```
+<br/>
+
+
+```{r pressure, echo=FALSE}
+
+mydata %>% 
+  filter(as.Date(Date) > as.Date("2013-12-31")) %>% 
+  ggplot(., aes(x=as.Date(Date), y=MedianListingPricePerSqft_1Bedroom, group=RegionName)) +
+    geom_line(aes(color=RegionName)) +
+    theme_economist()
+  
+```
+
+
+
+
+
+
+
+
+
+
+
